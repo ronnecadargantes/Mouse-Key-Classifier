@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mouse Key Classifier — AI Mouse &amp; Keyboard Studio</title>
+  <meta name="description" content="Browser-based AI mouse and keyboard classifier with brand detection, live camera and image upload scanning, community significance, and hardware studio design." />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Fraunces (Editorial Display), Plus Jakarta Sans (Body), JetBrains Mono (Telemetry) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- TensorFlow.js & Teachable Machine Image Library -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            studio: {
+              bg: '#F7F6F2',
+              surface: '#FFFFFF',
+              sunken: '#EFECE6',
+              border: '#E2DDD4'
+            },
+            slateink: {
+              900: '#161B22',
+              700: '#374151',
+              500: '#6B7280',
+              400: '#9CA3AF'
+            },
+            emeraldacc: {
+              800: '#065F46',
+              700: '#047857',
+              600: '#059669',
+              100: '#D1FAE5',
+              50: '#ECFDF5'
+            },
+            cobaltacc: {
+              700: '#1D4ED8',
+              600: '#2563EB',
+              100: '#DBEAFE',
+              50: '#EFF6FF'
+            },
+            amberacc: {
+              700: '#B45309',
+              100: '#FEF3C7'
+            }
+          },
+          fontFamily: {
+            serif: ['Fraunces', 'Georgia', 'serif'],
+            sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          },
+          boxShadow: {
+            tactile: '0 12px 32px -12px rgba(22, 27, 34, 0.08)',
+            panel: '0 4px 18px -4px rgba(22, 27, 34, 0.05)'
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    body {
+      background-color: #F7F6F2;
+      color: #161B22;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    h1, h2, h3, .font-editorial {
+      font-family: 'Fraunces', serif;
+    }
+    .font-telemetry {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Ensure webcam canvas fits container cleanly across viewports */
+    #webcam-container canvas {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover;
+      border-radius: 1rem;
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-emeraldacc-100 selection:text-emeraldacc-800">
+
+  <!-- Toast Notification Container (No alert or confirm dialogs used) -->
+  <div id="toast-container" aria-live="polite" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Sticky Top Navigation Bar -->
+  <header class="sticky top-0 z-40 bg-studio-bg/90 backdrop-blur-md border-b border-studio-border">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <a href="#top" class="flex items-center gap-2.5 group shrink-0">
+        <div class="w-9 h-9 rounded-xl bg-slateink-900 text-white flex items-center justify-center shadow-sm group-hover:bg-emeraldacc-700 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23-.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+          </svg>
+        </div>
+        <div>
+          <span class="font-editorial font-bold text-lg text-slateink-900 tracking-tight">Mouse Key Classifier</span>
+          <span class="hidden sm:inline-block ml-2 font-telemetry text-[11px] font-medium px-2 py-0.5 rounded-full bg-emeraldacc-50 text-emeraldacc-800 border border-emeraldacc-100">
+            ronnecadargantes
+          </span>
+        </div>
+      </a>
+
+      <nav aria-label="Primary Navigation" class="hidden md:flex items-center gap-7 text-sm font-medium text-slateink-700">
+        <a href="#scanner-section" class="hover:text-emeraldacc-700 transition">Scanner &amp; Brand</a>
+        <a href="#session-log-section" class="hover:text-emeraldacc-700 transition">Session Log</a>
+        <a href="#community-section" class="hover:text-emeraldacc-700 transition">Community Impact</a>
+        <a href="#design-principles-section" class="hover:text-emeraldacc-700 transition">Design Principles</a>
+      </nav>
+
+      <div class="flex items-center gap-2 shrink-0">
+        <span id="model-status-badge" class="inline-flex items-center gap-1.5 font-telemetry text-xs font-medium px-3 py-1.5 rounded-full bg-amberacc-100 text-amberacc-700">
+          <span class="w-2 h-2 rounded-full bg-amberacc-700 animate-pulse"></span>
+          Loading Model...
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section id="top" class="pt-12 pb-14 sm:pt-16 sm:pb-20 px-4 sm:px-6 lg:px-8 border-b border-studio-border">
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+      <div class="lg:col-span-7 space-y-6">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emeraldacc-50 text-emeraldacc-800 border border-emeraldacc-100 text-xs font-semibold tracking-wide uppercase">
+          <span class="w-2 h-2 rounded-full bg-emeraldacc-600"></span>
+          Google Teachable Machine • Peripheral Vision Studio
+        </div>
+
+        <h1 class="text-4xl sm:text-5xl lg:text-[3.35rem] font-bold text-slateink-900 leading-[1.12] tracking-tight">
+          Identify Any <span class="text-emeraldacc-700 italic">Mouse</span> or <span class="text-cobaltacc-700 italic">Keyboard</span> &amp; Its Brand.
+        </h1>
+
+        <p class="text-base sm:text-lg text-slateink-700 max-w-2xl leading-relaxed">
+          Scan a computer mouse or keyboard using your live camera or an uploaded photo. This browser-based studio pairs your trained Teachable Machine model (<span class="font-telemetry text-sm text-slateink-900">UECtOegIN</span>) with visual cue brand estimation and manual brand verification for schools, labs, and everyday setups.
+        </p>
+
+        <div class="flex flex-wrap items-center gap-4 pt-1">
+          <a href="#scanner-section" class="px-6 py-3.5 rounded-xl bg-slateink-900 hover:bg-emeraldacc-700 text-white font-semibold text-sm shadow-tactile transition inline-flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" />
+            </svg>
+            Start Scanning Now
+          </a>
+          <a href="#community-section" class="px-6 py-3.5 rounded-xl bg-studio-surface hover:bg-studio-sunken text-slateink-900 border border-studio-border font-semibold text-sm shadow-panel transition">
+            Explore Community Value
+          </a>
+        </div>
+      </div>
+
+      <!-- Hero Summary Telemetry Card -->
+      <div class="lg:col-span-5">
+        <div class="bg-studio-surface rounded-3xl p-6 sm:p-7 border border-studio-border shadow-tactile space-y-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="font-telemetry text-[11px] font-semibold uppercase tracking-wider text-slateink-500">Session Telemetry</p>
+              <h2 class="text-2xl font-bold text-slateink-900 mt-1">Peripheral Inventory</h2>
+            </div>
+            <span class="font-telemetry text-xs px-3 py-1 rounded-full bg-cobaltacc-50 text-cobaltacc-700 border border-cobaltacc-100">
+              GitHub Pages
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3.5">
+            <div class="p-4 rounded-2xl bg-studio-bg border border-studio-border">
+              <p class="text-xs font-medium text-slateink-500">Mouse Scans</p>
+              <p id="stat-mouse-count" class="font-telemetry text-2xl font-bold text-emeraldacc-700 mt-1">0</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-studio-bg border border-studio-border">
+              <p class="text-xs font-medium text-slateink-500">Keyboard Scans</p>
+              <p id="stat-keyboard-count" class="font-telemetry text-2xl font-bold text-cobaltacc-700 mt-1">0</p>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-studio-bg border border-studio-border flex items-center justify-between gap-3">
+            <div>
+              <p class="text-xs font-medium text-slateink-500">Latest Detected Brand</p>
+              <p id="stat-latest-brand" class="text-sm font-bold text-slateink-900 mt-0.5">Awaiting scan</p>
+            </div>
+            <span id="stat-total-logged" class="font-telemetry text-xs font-semibold px-2.5 py-1 rounded-lg bg-studio-surface border border-studio-border text-slateink-700">
+              0 Logged
+            </span>
+          </div>
+
+          <p class="text-xs text-slateink-500 leading-relaxed">
+            Supports rapid identification of a <strong class="text-slateink-900">mouse</strong> or <strong class="text-slateink-900">keyboard</strong> plus brand verification across major hardware makers.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Workspace -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 space-y-20">
+
+    <!-- SECTION 1: AI SCANNER + BRAND DETECTION -->
+    <section id="scanner-section" class="scroll-mt-24 space-y-8">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <span class="font-telemetry text-xs font-semibold uppercase tracking-widest text-emeraldacc-700">01 • AI Classifier &amp; Brand Engine</span>
+          <h2 class="text-3xl sm:text-4xl font-bold text-slateink-900 mt-1">Mouse &amp; Keyboard Scanner</h2>
+          <p class="text-slateink-700 mt-2 max-w-2xl text-sm sm:text-base">
+            Scan a mouse or keyboard using the live camera or upload an image file. View model class probabilities, inspect estimated brand cues, or select/override the detected brand before logging.
+          </p>
+        </div>
+
+        <!-- Scanner Mode Switcher -->
+        <div role="tablist" aria-label="Scanner Input Mode" class="inline-flex p-1 rounded-xl bg-studio-sunken border border-studio-border self-start">
+          <button id="tab-webcam" type="button" role="tab" aria-selected="true" onclick="switchScannerMode('webcam')" class="px-4 py-2 rounded-lg text-sm font-semibold bg-studio-surface text-slateink-900 shadow-sm transition">
+            Live Camera
+          </button>
+          <button id="tab-upload" type="button" role="tab" aria-selected="false" onclick="switchScannerMode('upload')" class="px-4 py-2 rounded-lg text-sm font-semibold text-slateink-700 hover:text-slateink-900 transition">
+            Upload Image
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <!-- Left Column: Live Camera / Image Upload Viewport -->
+        <div class="lg:col-span-6 bg-studio-surface rounded-3xl p-6 border border-studio-border shadow-panel space-y-4">
+          <!-- Webcam Mode Panel -->
+          <div id="mode-webcam-panel" class="space-y-4">
+            <div class="relative w-full aspect-[4/3] bg-slateink-900 rounded-2xl overflow-hidden flex items-center justify-center border border-studio-border">
+              <div id="webcam-container" class="w-full h-full flex items-center justify-center"></div>
+              <div id="webcam-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-slateink-900/95 text-white">
+                <div class="w-14 h-14 rounded-2xl bg-emeraldacc-800/70 text-emeraldacc-100 flex items-center justify-center mb-3">
+                  <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
+                  </svg>
+                </div>
+                <p class="font-semibold text-base">Live camera is off</p>
+                <p class="text-xs text-slateink-400 mt-1 max-w-xs">
+                  Click "Start Camera" to scan a mouse or keyboard in real time, or switch to "Upload Image".
+                </p>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex items-center gap-2.5">
+                <button id="btn-start-cam" type="button" onclick="startWebcam()" class="px-5 py-2.5 rounded-xl bg-emeraldacc-700 hover:bg-emeraldacc-800 text-white text-sm font-semibold transition inline-flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-emeraldacc-100"></span>
+                  Start Camera
+                </button>
+                <button id="btn-stop-cam" type="button" onclick="stopWebcam()" disabled class="px-4 py-2.5 rounded-xl bg-studio-sunken text-slateink-700 disabled:opacity-40 hover:bg-studio-border text-sm font-semibold transition">
+                  Stop Camera
+                </button>
+              </div>
+              <span class="font-telemetry text-xs text-slateink-500">Model: UECtOegIN</span>
+            </div>
+          </div>
+
+          <!-- Upload Image Mode Panel -->
+          <div id="mode-upload-panel" class="hidden space-y-4">
+            <label for="image-upload-input" id="drop-zone" class="relative w-full aspect-[4/3] rounded-2xl border-2 border-dashed border-studio-border hover:border-emeraldacc-600 bg-studio-bg flex flex-col items-center justify-center cursor-pointer overflow-hidden transition group">
+              <img id="uploaded-preview" alt="Uploaded preview of scanned mouse or keyboard" class="hidden w-full h-full object-contain bg-slateink-900" />
+              <div id="upload-prompt" class="text-center p-6 space-y-2">
+                <div class="w-14 h-14 mx-auto rounded-2xl bg-emeraldacc-50 text-emeraldacc-700 border border-emeraldacc-100 flex items-center justify-center group-hover:scale-105 transition">
+                  <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                  </svg>
+                </div>
+                <p class="font-semibold text-slateink-900">Click to upload or drag &amp; drop a photo</p>
+                <p class="text-xs text-slateink-500">Supports PNG, JPG, WEBP • Processed locally in your browser</p>
+              </div>
+              <input id="image-upload-input" type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event)" />
+            </label>
+
+            <div class="flex items-center justify-between gap-3">
+              <button type="button" onclick="document.getElementById('image-upload-input').click()" class="px-5 py-2.5 rounded-xl bg-slateink-900 hover:bg-emeraldacc-700 text-white text-sm font-semibold transition">
+                Select Photo File
+              </button>
+              <span class="text-xs text-slateink-500">Zero external image upload</span>
+            </div>
+          </div>
+
+          <!-- Model Class Confidence Bars -->
+          <div class="pt-4 border-t border-studio-border space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slateink-500">Teachable Machine Class Probabilities</h3>
+              <span id="top-prediction-summary" class="font-telemetry text-xs font-semibold text-slateink-900">Waiting for scan...</span>
+            </div>
+            <div id="predictions-container" class="space-y-3">
+              <div class="p-3.5 rounded-2xl bg-studio-bg border border-studio-border text-xs text-slateink-500">
+                Start the live camera or upload an image to see real-time model confidence scores.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Brand Detection & Peripheral Identification Card -->
+        <div class="lg:col-span-6 bg-studio-surface rounded-3xl p-6 sm:p-8 border border-studio-border shadow-panel space-y-6">
+          <div class="flex flex-wrap items-start justify-between gap-3 border-b border-studio-border pb-4">
+            <div>
+              <p class="font-telemetry text-[11px] font-semibold uppercase tracking-wider text-slateink-500">Brand &amp; Hardware Identification</p>
+              <h3 id="detected-brand-title" class="text-2xl font-bold text-slateink-900 mt-1">Logitech</h3>
+            </div>
+            <span id="detected-category-badge" class="px-3.5 py-1.5 rounded-full text-xs font-bold bg-emeraldacc-50 text-emeraldacc-800 border border-emeraldacc-100">
+              Category: Mouse
+            </span>
+          </div>
+
+          <!-- Brand & Hardware Details Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="p-4 rounded-2xl bg-studio-bg border border-studio-border">
+              <p class="text-[11px] font-semibold uppercase tracking-wider text-slateink-500">Detected / Selected Brand</p>
+              <p id="brand-detail-name" class="text-base font-bold text-slateink-900 mt-1">Logitech</p>
+              <p id="brand-detail-origin" class="text-xs text-slateink-500 mt-0.5">Visual cue &amp; user-verified hardware brand</p>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-studio-bg border border-studio-border">
+              <p class="text-[11px] font-semibold uppercase tracking-wider text-slateink-500">Peripheral Type</p>
+              <p id="brand-detail-type" class="text-base font-bold text-slateink-900 mt-1">Computer Mouse</p>
+              <p id="brand-detail-tier" class="text-xs text-slateink-500 mt-0.5">Ergonomic / Optical / Mechanical profile</p>
+            </div>
+          </div>
+
+          <!-- Visual Cue Analysis Readout -->
+          <div class="p-4 rounded-2xl bg-cobaltacc-50/70 border border-cobaltacc-100 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-cobaltacc-700">Visual Cue &amp; Brand Estimation</span>
+              <span id="brand-confidence-tag" class="font-telemetry text-xs font-semibold text-cobaltacc-700">Auto + Manual Override</span>
+            </div>
+            <p id="brand-cue-explanation" class="text-xs sm:text-sm text-slateink-700 leading-relaxed">
+              Visual vision models classify object form while lighting, color contrast, and frame cues estimate candidate brands. Because logos can vary by angle or wear, you can confirm or select the exact brand below before logging.
+            </p>
+          </div>
+
+          <!-- Brand Selector / Override & Peripheral Category Controls -->
+          <div class="space-y-4 pt-1">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="brand-select" class="block text-xs font-bold uppercase tracking-wider text-slateink-700 mb-1.5">
+                  Detected Brand (Select or Override)
+                </label>
+                <select id="brand-select" onchange="handleBrandSelectionChange()" class="w-full px-3.5 py-2.5 rounded-xl border border-studio-border bg-studio-bg text-sm font-semibold text-slateink-900 focus:outline-none focus:ring-2 focus:ring-emeraldacc-600">
+                  <option value="Logitech">Logitech</option>
+                  <option value="Razer">Razer</option>
+                  <option value="Corsair">Corsair</option>
+                  <option value="SteelSeries">SteelSeries</option>
+                  <option value="Keychron">Keychron</option>
+                  <option value="Redragon">Redragon</option>
+                  <option value="HP / Dell / Generic">HP / Dell / Generic</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="category-override-select" class="block text-xs font-bold uppercase tracking-wider text-slateink-700 mb-1.5">
+                  Peripheral Classification
+                </label>
+                <select id="category-override-select" onchange="handleCategoryOverrideChange()" class="w-full px-3.5 py-2.5 rounded-xl border border-studio-border bg-studio-bg text-sm font-semibold text-slateink-900 focus:outline-none focus:ring-2 focus:ring-emeraldacc-600">
+                  <option value="auto">Auto (From AI Model)</option>
+                  <option value="Mouse">Mouse</option>
+                  <option value="Keyboard">Keyboard</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label for="device-note-input" class="block text-xs font-bold uppercase tracking-wider text-slateink-700 mb-1.5">
+                Optional Device Model / Lab Note
+              </label>
+              <input id="device-note-input" type="text" placeholder="e.g., Wireless mouse in Lab Room B or Mechanical keyboard" class="w-full px-4 py-2.5 rounded-xl border border-studio-border bg-studio-bg text-sm text-slateink-900 focus:outline-none focus:ring-2 focus:ring-emeraldacc-600" />
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 pt-1">
+              <button type="button" onclick="reestimateBrandFromVisuals()" class="px-4 py-3 rounded-xl border border-studio-border bg-studio-bg hover:bg-studio-sunken text-slateink-900 text-sm font-semibold transition">
+                Re-Detect Brand Cues
+              </button>
+              <button type="button" onclick="logCurrentScanToSession()" class="flex-1 py-3 px-5 rounded-xl bg-emeraldacc-700 hover:bg-emeraldacc-800 text-white font-semibold text-sm shadow-tactile transition inline-flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Log Scan to Session
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: SESSION HISTORY LOG -->
+    <section id="session-log-section" class="scroll-mt-24 space-y-6">
+      <div class="bg-studio-surface rounded-3xl p-6 sm:p-8 border border-studio-border shadow-panel space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-studio-border pb-4">
+          <div>
+            <span class="font-telemetry text-xs font-semibold uppercase tracking-widest text-cobaltacc-700">02 • Recorded Scans</span>
+            <h2 class="text-2xl sm:text-3xl font-bold text-slateink-900 mt-0.5">Session Scan History</h2>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <span id="session-count-pill" class="font-telemetry text-xs font-semibold px-3 py-1.5 rounded-full bg-studio-bg border border-studio-border text-slateink-700">
+              0 entries
+            </span>
+            <button type="button" onclick="clearSessionHistory()" class="px-4 py-2 rounded-xl border border-studio-border bg-studio-bg hover:bg-amberacc-100 hover:text-amberacc-700 text-xs font-semibold text-slateink-700 transition">
+              Clear Session
+            </button>
+          </div>
+        </div>
+
+        <div id="session-history-list" class="space-y-3">
+          <div class="p-6 rounded-2xl bg-studio-bg border border-dashed border-studio-border text-center space-y-1">
+            <p class="text-sm font-semibold text-slateink-700">No mouse or keyboard scans logged yet</p>
+            <p class="text-xs text-slateink-500">Scan an item or choose a brand above and click "Log Scan to Session" to record your results.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: SIGNIFICANCE TO THE COMMUNITY -->
+    <section id="community-section" class="scroll-mt-24 bg-slateink-900 text-white rounded-[2rem] p-8 sm:p-12 lg:p-14 shadow-tactile space-y-8">
+      <div class="max-w-3xl space-y-3">
+        <span class="font-telemetry inline-block px-3.5 py-1 rounded-full bg-emeraldacc-800/80 text-emeraldacc-100 text-xs font-semibold uppercase tracking-widest">
+          03 • Significance to the Community
+        </span>
+        <h2 class="text-3xl sm:text-4xl font-bold leading-tight">
+          Why Mouse &amp; Keyboard Recognition Matters for Our Community
+        </h2>
+        <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+          Everyday computer peripherals—the mouse and keyboard—are the primary bridge between people and digital opportunity. Making peripheral recognition and brand awareness accessible in the browser supports classrooms, community labs, and learners across every skill level.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-2.5">
+          <p class="font-telemetry text-xs font-semibold text-emeraldacc-100">01 / STUDENTS &amp; SCHOOLS</p>
+          <h3 class="text-lg font-bold text-white">Hands-On AI Literacy</h3>
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            Helps students see how machine learning works on familiar hardware—a mouse and keyboard—turning abstract AI concepts into tangible classroom learning.
+          </p>
+        </div>
+
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-2.5">
+          <p class="font-telemetry text-xs font-semibold text-emeraldacc-100">02 / COMPUTER LABS</p>
+          <h3 class="text-lg font-bold text-white">Hardware &amp; Brand Tracking</h3>
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            Assists school laboratories, libraries, and community tech hubs in cataloging, inspecting, and identifying mouse and keyboard brands across workstations.
+          </p>
+        </div>
+
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-2.5">
+          <p class="font-telemetry text-xs font-semibold text-emeraldacc-100">03 / ACCESSIBILITY &amp; ERGONOMICS</p>
+          <h3 class="text-lg font-bold text-white">Inclusive Input Awareness</h3>
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            Encourages thoughtful selection of ergonomic mouse shapes and comfortable keyboards to support learners with diverse physical and accessibility needs.
+          </p>
+        </div>
+
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-2.5">
+          <p class="font-telemetry text-xs font-semibold text-emeraldacc-100">04 / OPEN COMMUNITY ACCESS</p>
+          <h3 class="text-lg font-bold text-white">Free Browser-Based Tool</h3>
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            Runs directly in standard web browsers on GitHub Pages without paid software licenses, supporting equitable digital education for local communities.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: PRINCIPLES OF DESIGN APPLIED -->
+    <section id="design-principles-section" class="scroll-mt-24 space-y-6">
+      <div class="max-w-2xl">
+        <span class="font-telemetry text-xs font-semibold uppercase tracking-widest text-emeraldacc-700">04 • Visual Craft &amp; Usability</span>
+        <h2 class="text-2xl sm:text-3xl font-bold text-slateink-900 mt-1">Principles of Design Applied</h2>
+        <p class="text-sm sm:text-base text-slateink-700 mt-1.5">
+          Every interface element is intentionally structured around core principles of design to keep scanning, brand checking, and reading effortless.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div class="p-5 rounded-2xl bg-studio-surface border border-studio-border shadow-panel space-y-1.5">
+          <h3 class="text-base font-bold text-slateink-900">1. Visual Hierarchy</h3>
+          <p class="text-xs sm:text-sm text-slateink-700 leading-relaxed">
+            Fraunces display titles, Plus Jakarta Sans body copy, and JetBrains Mono probability readouts establish clear priority from top-level purpose to live scan metrics.
+          </p>
+        </div>
+
+        <div class="p-5 rounded-2xl bg-studio-surface border border-studio-border shadow-panel space-y-1.5">
+          <h3 class="text-base font-bold text-slateink-900">2. Contrast &amp; Color Theory</h3>
+          <p class="text-xs sm:text-sm text-slateink-700 leading-relaxed">
+            A calm warm-stone background pairs with high-contrast slate ink, emerald accents for mouse identification, and cobalt accents for keyboard and brand telemetry.
+          </p>
+        </div>
+
+        <div class="p-5 rounded-2xl bg-studio-surface border border-studio-border shadow-panel space-y-1.5">
+          <h3 class="text-base font-bold text-slateink-900">3. Balance &amp; Alignment</h3>
+          <p class="text-xs sm:text-sm text-slateink-700 leading-relaxed">
+            A 12-column responsive layout aligns camera controls, confidence bars, and brand verification cards cleanly across mobile, tablet, and desktop screens.
+          </p>
+        </div>
+
+        <div class="p-5 rounded-2xl bg-studio-surface border border-studio-border shadow-panel space-y-1.5">
+          <h3 class="text-base font-bold text-slateink-900">4. Proximity &amp; Grouping</h3>
+          <p class="text-xs sm:text-sm text-slateink-700 leading-relaxed">
+            Camera toggles sit directly beside the live preview, while brand selection, category controls, and the session log button stay grouped in one workflow card.
+          </p>
+        </div>
+
+        <div class="p-5 rounded-2xl bg-studio-surface border border-studio-border shadow-panel space-y-1.5">
+          <h3 class="text-base font-bold text-slateink-900">5. Repetition &amp; Consistency</h3>
+          <p class="text-xs sm:text-sm text-slateink-700 leading-relaxed">
+            Uniform rounded corners, consistent border tones, and repeatable card structures create predictable interactions across every section of the page.
+          </p>
+        </div>
+
+        <div class="p-5 rounded-2xl bg-studio-surface border border-studio-border shadow-panel space-y-1.5">
+          <h3 class="text-base font-bold text-slateink-900">6. White Space (Negative Space)</h3>
+          <p class="text-xs sm:text-sm text-slateink-700 leading-relaxed">
+            Generous outer margins, card padding, and vertical spacing between sections prevent visual crowding and keep focus on your scanned mouse or keyboard.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-studio-border bg-studio-surface py-8 px-4 sm:px-6 lg:px-8 mt-12">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slateink-500">
+      <div class="flex items-center gap-2">
+        <span class="font-editorial font-bold text-sm text-slateink-900">Mouse Key Classifier</span>
+        <span>• Repository: <strong class="text-slateink-700">ronnecadargantes/Mouse-Key-Classifier</strong></span>
+      </div>
+      <p>Built with Google Teachable Machine &amp; TensorFlow.js for Community Tech Learning</p>
+    </div>
+  </footer>
+
+  <script>
+    // =========================================================================
+    // 1. CONFIGURATION & BRAND METADATA
+    // =========================================================================
+    const MODEL_URL_BASE = "https://teachablemachine.withgoogle.com/models/UECtOegIN/";
+
+    const BRAND_PROFILES = {
+      "Logitech": {
+        origin: "Swiss-founded peripheral & productivity hardware brand",
+        mouseTier: "Ergonomic wireless / contoured optical mouse profile",
+        keyboardTier: "Low-profile / tactile productivity & gaming keyboard profile",
+        cueHint: "Often associated with clean neutral/graphite finishes, sculpted palm curves, or compact wireless layouts."
+      },
+      "Razer": {
+        origin: "Performance gaming peripheral manufacturer",
+        mouseTier: "Lightweight ambidextrous / high-DPI gaming mouse profile",
+        keyboardTier: "Mechanical / optical switch gaming keyboard profile",
+        cueHint: "Often associated with matte dark chassis styling, sharp contours, or vibrant green/chroma accents."
+      },
+      "Corsair": {
+        origin: " Enthusiast PC hardware & mechanical input maker",
+        mouseTier: "Structured palm/claw gaming mouse profile",
+        keyboardTier: "Full-size / tenkeyless mechanical keyboard profile",
+        cueHint: "Often associated with brushed/anodized dark finishes, crisp key legends, or multi-zone lighting."
+      },
+      "SteelSeries": {
+        origin: "Esports & precision peripheral designer",
+        mouseTier: "Symmetrical / lightweight esports mouse profile",
+        keyboardTier: "Compact / tenkeyless mechanical keyboard profile",
+        cueHint: "Often associated with minimalist matte surfaces, clean geometry, and subtle status lighting."
+      },
+      "Keychron": {
+        origin: "Custom & mechanical keyboard specialist",
+        mouseTier: "Ergonomic / wireless desk mouse profile",
+        keyboardTier: "Compact / 75% / tenkeyless mechanical keycap layout",
+        cueHint: "Often associated with multi-tone keycaps, exposed switch rows, and compact rectangular key grids."
+      },
+      "Redragon": {
+        origin: "Value-focused gaming mouse & keyboard maker",
+        mouseTier: "Contoured / multi-button gaming mouse profile",
+        keyboardTier: "Compact / mechanical tactile keyboard profile",
+        cueHint: "Often associated with bold angular silhouettes, high-contrast keycaps, or colorful backlighting."
+      },
+      "HP / Dell / Generic": {
+        origin: "Standard office, OEM, or unbranded hardware",
+        mouseTier: "Standard two-button + scroll wheel office mouse",
+        keyboardTier: "Standard membrane office / laptop-style keyboard",
+        cueHint: "Often associated with understated black/silver/white plastic housings and classic rectangular key rows."
+      }
+    };
+
+    let tmModel = null;
+    let webcamInstance = null;
+    let isWebcamActive = false;
+    let scanLoopId = null;
+    let lastBrandEstimateTime = 0;
+
+    let currentScanState = {
+      rawClassName: "",
+      category: "Mouse",
+      confidence: 0,
+      brand: "Logitech",
+      cueSummary: "Ready for scanning or manual brand selection."
+    };
+
+    let sessionRecords = [];
+
+    // =========================================================================
+    // 2. TOAST NOTIFICATION HELPER
+    // =========================================================================
+    function showToast(message, accent = "emerald") {
+      const container = document.getElementById("toast-container");
+      if (!container) return;
+
+      const el = document.createElement("div");
+      const bgClass = accent === "cobalt"
+        ? "bg-cobaltacc-700 text-white"
+        : accent === "amber"
+        ? "bg-slateink-900 text-white"
+        : "bg-emeraldacc-800 text-white";
+
+      el.className = `pointer-events-auto px-4 py-3 rounded-xl shadow-tactile text-sm font-medium flex items-center gap-2.5 transition-all duration-300 translate-y-2 opacity-0 ${bgClass}`;
+      el.innerHTML = `<span class="w-2 h-2 rounded-full bg-white shrink-0"></span><span>${escapeHtml(message)}</span>`;
+
+      container.appendChild(el);
+      requestAnimationFrame(() => {
+        el.classList.remove("translate-y-2", "opacity-0");
+      });
+
+      setTimeout(() => {
+        el.classList.add("opacity-0", "translate-y-2");
+        setTimeout(() => el.remove(), 280);
+      }, 3000);
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // =========================================================================
+    // 3. TEACHABLE MACHINE MODEL LOADING & SCANNING
+    // =========================================================================
+    async function loadClassifierModel() {
+      const badge = document.getElementById("model-status-badge");
+      try {
+        if (typeof tmImage === "undefined") {
+          throw new Error("Teachable Machine library not loaded.");
+        }
+        const modelJsonUrl = MODEL_URL_BASE + "model.json";
+        const metadataJsonUrl = MODEL_URL_BASE + "metadata.json";
+        tmModel = await tmImage.load(modelJsonUrl, metadataJsonUrl);
+
+        badge.className = "inline-flex items-center gap-1.5 font-telemetry text-xs font-semibold px-3 py-1.5 rounded-full bg-emeraldacc-100 text-emeraldacc-800";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emeraldacc-600"></span> Model Ready`;
+      } catch (err) {
+        console.error("Error loading Teachable Machine model:", err);
+        badge.className = "inline-flex items-center gap-1.5 font-telemetry text-xs font-semibold px-3 py-1.5 rounded-full bg-amberacc-100 text-amberacc-700";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amberacc-700"></span> Offline / Retry`;
+      }
+    }
+
+    function switchScannerMode(mode) {
+      const webcamPanel = document.getElementById("mode-webcam-panel");
+      const uploadPanel = document.getElementById("mode-upload-panel");
+      const tabWebcam = document.getElementById("tab-webcam");
+      const tabUpload = document.getElementById("tab-upload");
+
+      if (mode === "webcam") {
+        webcamPanel.classList.remove("hidden");
+        uploadPanel.classList.add("hidden");
+        tabWebcam.setAttribute("aria-selected", "true");
+        tabUpload.setAttribute("aria-selected", "false");
+        tabWebcam.className = "px-4 py-2 rounded-lg text-sm font-semibold bg-studio-surface text-slateink-900 shadow-sm transition";
+        tabUpload.className = "px-4 py-2 rounded-lg text-sm font-semibold text-slateink-700 hover:text-slateink-900 transition";
+      } else {
+        stopWebcam();
+        webcamPanel.classList.add("hidden");
+        uploadPanel.classList.remove("hidden");
+        tabWebcam.setAttribute("aria-selected", "false");
+        tabUpload.setAttribute("aria-selected", "true");
+        tabUpload.className = "px-4 py-2 rounded-lg text-sm font-semibold bg-studio-surface text-slateink-900 shadow-sm transition";
+        tabWebcam.className = "px-4 py-2 rounded-lg text-sm font-semibold text-slateink-700 hover:text-slateink-900 transition";
+      }
+    }
+
+    async function startWebcam() {
+      if (!tmModel) {
+        await loadClassifierModel();
+        if (!tmModel) {
+          showToast("Model is still loading. Please check your connection and try again.", "amber");
+          return;
+        }
+      }
+      if (isWebcamActive) return;
+
+      try {
+        const flip = true;
+        webcamInstance = new tmImage.Webcam(400, 300, flip);
+        await webcamInstance.setup();
+        await webcamInstance.play();
+        isWebcamActive = true;
+
+        const container = document.getElementById("webcam-container");
+        container.innerHTML = "";
+        container.appendChild(webcamInstance.canvas);
+
+        document.getElementById("webcam-placeholder").classList.add("hidden");
+        document.getElementById("btn-start-cam").disabled = true;
+        document.getElementById("btn-start-cam").classList.add("opacity-50");
+        document.getElementById("btn-stop-cam").disabled = false;
+
+        scanLoopId = window.requestAnimationFrame(webcamScanLoop);
+        showToast("Live camera started. Aim at a mouse or keyboard.", "emerald");
+      } catch (err) {
+        console.error("Webcam setup error:", err);
+        showToast("Camera access unavailable. Use 'Upload Image' to test a photo instead.", "amber");
+      }
+    }
+
+    async function webcamScanLoop() {
+      if (!isWebcamActive || !webcamInstance) return;
+      try {
+        webcamInstance.update();
+        const now = performance.now();
+        const shouldEstimateBrand = now - lastBrandEstimateTime > 900;
+        if (shouldEstimateBrand) {
+          lastBrandEstimateTime = now;
+        }
+        await runPredictionOnSource(webcamInstance.canvas, shouldEstimateBrand);
+      } catch (err) {
+        console.error("Frame prediction error:", err);
+      }
+      scanLoopId = window.requestAnimationFrame(webcamScanLoop);
+    }
+
+    function stopWebcam() {
+      isWebcamActive = false;
+      if (scanLoopId) {
+        cancelAnimationFrame(scanLoopId);
+        scanLoopId = null;
+      }
+      if (webcamInstance) {
+        try {
+          webcamInstance.stop();
+        } catch (e) {
+          // Safe cleanup
+        }
+        webcamInstance = null;
+      }
+      document.getElementById("webcam-placeholder").classList.remove("hidden");
+      document.getElementById("btn-start-cam").disabled = false;
+      document.getElementById("btn-start-cam").classList.remove("opacity-50");
+      document.getElementById("btn-stop-cam").disabled = true;
+    }
+
+    async function handleImageUpload(event) {
+      const file = event.target?.files?.[0];
+      if (!file) return;
+
+      if (!tmModel) {
+        await loadClassifierModel();
+        if (!tmModel) {
+          showToast("Model is not ready yet. Please try again in a moment.", "amber");
+          return;
+        }
+      }
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const imgEl = document.getElementById("uploaded-preview");
+        const promptEl = document.getElementById("upload-prompt");
+        imgEl.onload = async function () {
+          try {
+            await runPredictionOnSource(imgEl, true);
+            showToast("Image scan complete.", "emerald");
+          } catch (err) {
+            console.error("Image prediction error:", err);
+            showToast("Could not analyze image. Try another photo.", "amber");
+          }
+        };
+        imgEl.src = e.target.result;
+        imgEl.classList.remove("hidden");
+        promptEl.classList.add("hidden");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Drag & Drop support on Upload Zone
+    const dropZoneEl = document.getElementById("drop-zone");
+    if (dropZoneEl) {
+      dropZoneEl.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZoneEl.classList.add("border-emeraldacc-600", "bg-emeraldacc-50/40");
+      });
+      dropZoneEl.addEventListener("dragleave", () => {
+        dropZoneEl.classList.remove("border-emeraldacc-600", "bg-emeraldacc-50/40");
+      });
+      dropZoneEl.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZoneEl.classList.remove("border-emeraldacc-600", "bg-emeraldacc-50/40");
+        const droppedFile = e.dataTransfer?.files?.[0];
+        if (droppedFile && droppedFile.type.startsWith("image/")) {
+          const inputEl = document.getElementById("image-upload-input");
+          const dt = new DataTransfer();
+          dt.items.add(droppedFile);
+          inputEl.files = dt.files;
+          handleImageUpload({ target: inputEl });
+        }
+      });
+    }
+
+    function normalizeCategoryLabel(rawLabel) {
+      const lower = String(rawLabel || "").toLowerCase();
+      if (lower.includes("key")) {
+        return "Keyboard";
+      }
+      return "Mouse";
+    }
+
+    function getActiveCategory() {
+      const override = document.getElementById("category-override-select")?.value;
+      if (override === "Mouse" || override === "Keyboard") {
+        return override;
+      }
+      return currentScanState.category || "Mouse";
+    }
+
+    // =========================================================================
+    // 4. VISUAL CUE BRAND ESTIMATION & OVERRIDE LOGIC
+    // =========================================================================
+    function estimateBrandFromVisualElement(sourceEl, category) {
+      // Sample pixel brightness & saturation cues from the scanned frame/image
+      try {
+        const offscreen = document.createElement("canvas");
+        offscreen.width = 48;
+        offscreen.height = 36;
+        const ctx = offscreen.getContext("2d");
+        ctx.drawImage(sourceEl, 0, 0, 48, 36);
+        const data = ctx.getImageData(0, 0, 48, 36).data;
+
+        let totalLuma = 0;
+        let highSatPixels = 0;
+        let greenPixels = 0;
+        const pixelCount = data.length / 4;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+          totalLuma += luma;
+
+          const maxC = Math.max(r, g, b);
+          const minC = Math.min(r, g, b);
+          if (maxC - minC > 55) {
+            highSatPixels++;
+          }
+          if (g > r + 25 && g > b + 20) {
+            greenPixels++;
+          }
+        }
+
+        const avgLuma = totalLuma / pixelCount;
+        const satRatio = highSatPixels / pixelCount;
+        const greenRatio = greenPixels / pixelCount;
+
+        if (category === "Keyboard") {
+          if (satRatio > 0.14) {
+            return {
+              brand: "Corsair",
+              cueText: "Detected multi-tone/backlit visual contrast typical of mechanical or gaming keyboards. Confirm or adjust the brand if needed."
+            };
+          }
+          if (avgLuma > 135) {
+            return {
+              brand: "Keychron",
+              cueText: "Detected lighter keycap/surface brightness typical of compact or two-tone mechanical keyboards. Verify the brand below."
+            };
+          }
+          return {
+            brand: "Logitech",
+            cueText: "Detected clean, balanced surface tones on a keyboard scan. Select another brand if your hardware differs."
+          };
+        } else {
+          if (greenRatio > 0.04) {
+            return {
+              brand: "Razer",
+              cueText: "Detected subtle green/high-contrast visual cues on a mouse scan. Confirm or override the brand below."
+            };
+          }
+          if (avgLuma < 85) {
+            return {
+              brand: "SteelSeries",
+              cueText: "Detected low-key dark housing tones on a mouse scan. Confirm or override the brand below."
+            };
+          }
+          if (avgLuma > 155) {
+            return {
+              brand: "HP / Dell / Generic",
+              cueText: "Detected bright/neutral surface lighting on a mouse scan. Verify the brand before logging."
+            };
+          }
+          return {
+            brand: "Logitech",
+            cueText: "Detected neutral ergonomic/desk lighting cues on a mouse scan. Confirm or select another brand below."
+          };
+        }
+      } catch (err) {
+        return {
+          brand: category === "Keyboard" ? "Keychron" : "Logitech",
+          cueText: "Estimated hardware brand from peripheral profile. Use the brand selector to set the exact brand."
+        };
+      }
+    }
+
+    async function runPredictionOnSource(sourceElement, updateBrandEstimate) {
+      if (!tmModel) return;
+      const predictions = await tmModel.predict(sourceElement);
+      predictions.sort((a, b) => b.probability - a.probability);
+
+      const topPred = predictions[0];
+      const pct = Math.round(topPred.probability * 100);
+      const inferredCategory = normalizeCategoryLabel(topPred.className);
+
+      currentScanState.rawClassName = topPred.className;
+      currentScanState.confidence = pct;
+      if (document.getElementById("category-override-select").value === "auto") {
+        currentScanState.category = inferredCategory;
+      }
+
+      const activeCat = getActiveCategory();
+      document.getElementById("top-prediction-summary").textContent = `${topPred.className} (${pct}%)`;
+
+      const predContainer = document.getElementById("predictions-container");
+      predContainer.innerHTML = predictions.map((item) => {
+        const itemPct = (item.probability * 100).toFixed(1);
+        const isKey = normalizeCategoryLabel(item.className) === "Keyboard";
+        const barColor = isKey ? "bg-cobaltacc-600" : "bg-emeraldacc-600";
+        const textColor = isKey ? "text-cobaltacc-700" : "text-emeraldacc-700";
+
+        return `
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs font-semibold">
+              <span class="text-slateink-900">${escapeHtml(item.className)}</span>
+              <span class="font-telemetry ${textColor}">${itemPct}%</span>
+            </div>
+            <div class="w-full h-2.5 bg-studio-sunken rounded-full overflow-hidden">
+              <div class="h-full ${barColor} rounded-full transition-all duration-150" style="width: ${itemPct}%"></div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      if (updateBrandEstimate) {
+        const estimate = estimateBrandFromVisualElement(sourceElement, activeCat);
+        currentScanState.brand = estimate.brand;
+        currentScanState.cueSummary = estimate.cueText;
+        document.getElementById("brand-select").value = estimate.brand;
+      }
+
+      renderBrandIdentificationCard();
+    }
+
+    function reestimateBrandFromVisuals() {
+      const activeCat = getActiveCategory();
+      const webcamCanvas = document.querySelector("#webcam-container canvas");
+      const uploadedImg = document.getElementById("uploaded-preview");
+      const isUploadVisible = !document.getElementById("mode-upload-panel").classList.contains("hidden") && !uploadedImg.classList.contains("hidden");
+
+      const sourceEl = isUploadVisible ? uploadedImg : webcamCanvas;
+      if (sourceEl) {
+        const estimate = estimateBrandFromVisualElement(sourceEl, activeCat);
+        currentScanState.brand = estimate.brand;
+        currentScanState.cueSummary = estimate.cueText;
+        document.getElementById("brand-select").value = estimate.brand;
+      } else {
+        const selectedBrand = document.getElementById("brand-select").value;
+        const profile = BRAND_PROFILES[selectedBrand] || BRAND_PROFILES["Logitech"];
+        currentScanState.brand = selectedBrand;
+        currentScanState.cueSummary = profile.cueHint;
+      }
+
+      renderBrandIdentificationCard();
+      showToast(`Brand card updated: ${currentScanState.brand} (${activeCat})`, activeCat === "Keyboard" ? "cobalt" : "emerald");
+    }
+
+    function handleBrandSelectionChange() {
+      const selected = document.getElementById("brand-select").value;
+      const profile = BRAND_PROFILES[selected] || BRAND_PROFILES["Logitech"];
+      currentScanState.brand = selected;
+      currentScanState.cueSummary = `Selected "${selected}" — ${profile.cueHint}`;
+      renderBrandIdentificationCard();
+    }
+
+    function handleCategoryOverrideChange() {
+      const overrideVal = document.getElementById("category-override-select").value;
+      if (overrideVal === "Mouse" || overrideVal === "Keyboard") {
+        currentScanState.category = overrideVal;
+      } else if (currentScanState.rawClassName) {
+        currentScanState.category = normalizeCategoryLabel(currentScanState.rawClassName);
+      }
+      renderBrandIdentificationCard();
+    }
+
+    function renderBrandIdentificationCard() {
+      const activeCat = getActiveCategory();
+      const brandName = document.getElementById("brand-select").value || currentScanState.brand || "Logitech";
+      const profile = BRAND_PROFILES[brandName] || BRAND_PROFILES["Logitech"];
+
+      document.getElementById("detected-brand-title").textContent = brandName;
+      document.getElementById("brand-detail-name").textContent = brandName;
+      document.getElementById("brand-detail-origin").textContent = profile.origin;
+
+      const catBadge = document.getElementById("detected-category-badge");
+      if (activeCat === "Keyboard") {
+        catBadge.className = "px-3.5 py-1.5 rounded-full text-xs font-bold bg-cobaltacc-50 text-cobaltacc-700 border border-cobaltacc-100";
+        catBadge.textContent = "Category: Keyboard";
+        document.getElementById("brand-detail-type").textContent = "Keyboard";
+        document.getElementById("brand-detail-tier").textContent = profile.keyboardTier;
+      } else {
+        catBadge.className = "px-3.5 py-1.5 rounded-full text-xs font-bold bg-emeraldacc-50 text-emeraldacc-800 border border-emeraldacc-100";
+        catBadge.textContent = "Category: Mouse";
+        document.getElementById("brand-detail-type").textContent = "Mouse";
+        document.getElementById("brand-detail-tier").textContent = profile.mouseTier;
+      }
+
+      document.getElementById("brand-cue-explanation").textContent = currentScanState.cueSummary;
+    }
+
+    // =========================================================================
+    // 5. SESSION LOGGING & TELEMETRY UPDATES
+    // =========================================================================
+    function logCurrentScanToSession() {
+      const activeCat = getActiveCategory();
+      const brandName = document.getElementById("brand-select").value || "Logitech";
+      const noteText = document.getElementById("device-note-input").value.trim();
+      const confText = currentScanState.confidence > 0 ? `${currentScanState.confidence}% AI` : "Verified";
+
+      const record = {
+        id: Date.now(),
+        category: activeCat,
+        brand: brandName,
+        confidenceLabel: confText,
+        note: noteText || (activeCat === "Keyboard" ? "Scanned keyboard" : "Scanned mouse"),
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      };
+
+      sessionRecords.unshift(record);
+      document.getElementById("device-note-input").value = "";
+      renderSessionUI();
+      showToast(`Logged ${brandName} ${activeCat} to session.`, activeCat === "Keyboard" ? "cobalt" : "emerald");
+    }
+
+    function deleteSessionRecord(id) {
+      sessionRecords = sessionRecords.filter((item) => item.id !== id);
+      renderSessionUI();
+      showToast("Removed scan entry.", "amber");
+    }
+
+    function clearSessionHistory() {
+      sessionRecords = [];
+      renderSessionUI();
+      showToast("Session history cleared.", "amber");
+    }
+
+    function renderSessionUI() {
+      let mouseTotal = 0;
+      let keyboardTotal = 0;
+
+      sessionRecords.forEach((item) => {
+        if (item.category === "Keyboard") keyboardTotal++;
+        else mouseTotal++;
+      });
+
+      document.getElementById("stat-mouse-count").textContent = String(mouseTotal);
+      document.getElementById("stat-keyboard-count").textContent = String(keyboardTotal);
+      document.getElementById("stat-total-logged").textContent = `${sessionRecords.length} Logged`;
+      document.getElementById("session-count-pill").textContent = `${sessionRecords.length} ${sessionRecords.length === 1 ? "entry" : "entries"}`;
+
+      const latestEl = document.getElementById("stat-latest-brand");
+      if (sessionRecords.length > 0) {
+        latestEl.textContent = `${sessionRecords[0].brand} (${sessionRecords[0].category})`;
+      } else {
+        latestEl.textContent = "Awaiting scan";
+      }
+
+      const listEl = document.getElementById("session-history-list");
+      if (sessionRecords.length === 0) {
+        listEl.innerHTML = `
+          <div class="p-6 rounded-2xl bg-studio-bg border border-dashed border-studio-border text-center space-y-1">
+            <p class="text-sm font-semibold text-slateink-700">No mouse or keyboard scans logged yet</p>
+            <p class="text-xs text-slateink-500">Scan an item or choose a brand above and click "Log Scan to Session" to record your results.</p>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = sessionRecords.map((item) => {
+        const isKeyboard = item.category === "Keyboard";
+        const pillClass = isKeyboard
+          ? "bg-cobaltacc-50 text-cobaltacc-700 border-cobaltacc-100"
+          : "bg-emeraldacc-50 text-emeraldacc-800 border-emeraldacc-100";
+
+        return `
+          <div class="p-4 rounded-2xl bg-studio-bg border border-studio-border flex items-center justify-between gap-4">
+            <div class="min-w-0 space-y-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold border ${pillClass}">${escapeHtml(item.category)}</span>
+                <span class="text-sm font-bold text-slateink-900">${escapeHtml(item.brand)}</span>
+                <span class="font-telemetry text-[11px] text-slateink-500">${escapeHtml(item.confidenceLabel)} • ${escapeHtml(item.timestamp)}</span>
+              </div>
+              <p class="text-xs text-slateink-700 truncate">${escapeHtml(item.note)}</p>
+            </div>
+
+            <button type="button" onclick="deleteSessionRecord(${item.id})" aria-label="Delete scan entry" class="p-2 rounded-xl text-slateink-500 hover:text-slateink-900 hover:bg-studio-sunken transition shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // =========================================================================
+    // 6. INITIALIZATION
+    // =========================================================================
+    window.addEventListener("DOMContentLoaded", () => {
+      renderBrandIdentificationCard();
+      renderSessionUI();
+      loadClassifierModel();
+    });
+  </script>
+</body>
+</html>
